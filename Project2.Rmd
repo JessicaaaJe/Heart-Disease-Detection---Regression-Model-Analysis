@@ -1,0 +1,278 @@
+---
+title: "Project2"
+author: "Jessica Chen Cynthia Wang"
+date: "4/26/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+heartDisease <- read.csv("~/Desktop/heartDisease.csv")
+```
+
+```{r}
+summary(heartDisease)
+```
+
+Gender, diabetes are the quanlitative variable. Age, cigsPerDay(the number of cigarettes that the person smoked on average in one day), totChol(total cholesterol level), sysBP(systolic blood pressure),BMI(Body Mass Index), heartRate, glucose are numeric data. The response varible is TenYearCHD, which represents 10 year risk of coronary heart disease. 
+
+## EDA 
+
+gender vs TenYearCHD
+```{r}
+mosaicplot(gender ~ TenYearCHD, data = heartDisease , col = c("Blue", "Red"), xlab = "gender", ylab = "TenYearCHD", main = "TenYearCHD vs gender")
+```
+In gender, 0 represents female, and 1 represents male. In TenYearCHD, 1 means yes -"have ten year risk of coronary heart disease" and 0 means no - "do not have ten year risk of coronary heart disease". The sample has relatiely the same number of male and female. Male has higher percentage of having tenYearCHD than female. 
+
+```{r}
+genderModel <-  glm(TenYearCHD ~ gender, data =heartDisease, family = binomial)
+summary(genderModel)
+```
+
+$$log\left(\frac{\hat{\pi}}{1-\hat{\pi}}\right) = - 1.9000 + 0.6444 gender$$
+
+diabetes vs TenYearCHD 
+```{r}
+mosaicplot(diabetes ~ TenYearCHD, data = heartDisease , col = c("Blue", "Red"), xlab = "diabetes", ylab = "TenYearCHD", main = "TenYearCHD vs diabetes")
+```
+Most of the people in the sample does not have diabetes. People who have diabetes shows higher possibility to have the 10 year risk of coronary heart disease. 
+
+```{r}
+emplogit <- function(x, y, binsize = NULL, ci = FALSE, probit = FALSE,prob = FALSE, main = NULL, xlab = "", ylab = "", lowess.in = FALSE){
+  # x         vector with values of the independent variable
+  # y         vector of binary responses
+  # binsize   integer value specifying bin size (optional)
+  # ci        logical value indicating whether to plot approximate
+  #           confidence intervals (not supported as of 02/08/2015)
+  # probit    logical value indicating whether to plot probits instead
+  #           of logits
+  # prob      logical value indicating whether to plot probabilities
+  #           without transforming
+  #
+  # the rest are the familiar plotting options
+  
+  if (length(x) != length(y))
+    stop("x and y lengths differ")
+  if (any(y < 0 | y > 1))
+    stop("y not between 0 and 1")
+  if (length(x) < 100 & is.null(binsize))
+    stop("Less than 100 observations: specify binsize manually")
+  
+  if (is.null(binsize)) binsize = min(round(length(x)/10), 50)
+  
+  if (probit){
+    link = qnorm
+    if (is.null(main)) main = "Empirical probits"
+  } else {
+    link = function(x) log(x/(1-x))
+    if (is.null(main)) main = "Empirical logits"
+  }
+  
+  sort = order(x)
+  x = x[sort]
+  y = y[sort]
+  a = seq(1, length(x), by=binsize)
+  b = c(a[-1] - 1, length(x))
+  
+  prob = xmean = ns = rep(0, length(a)) # ns is for CIs
+  for (i in 1:length(a)){
+    range = (a[i]):(b[i])
+    prob[i] = mean(y[range])
+    xmean[i] = mean(x[range])
+    ns[i] = b[i] - a[i] + 1 # for CI 
+  }
+  
+  extreme = (prob == 1 | prob == 0)
+  prob[prob == 0] = min(prob[!extreme])
+  prob[prob == 1] = max(prob[!extreme])
+  
+  g = link(prob) # logits (or probits if probit == TRUE)
+  
+  linear.fit = lm(g[!extreme] ~ xmean[!extreme])
+  b0 = linear.fit$coef[1]
+  b1 = linear.fit$coef[2]
+  
+  loess.fit = loess(g[!extreme] ~ xmean[!extreme])
+  
+  plot(xmean, g, main=main, xlab=xlab, ylab=ylab)
+  abline(b0,b1)
+  if(lowess.in ==TRUE){
+  lines(loess.fit$x, loess.fit$fitted, lwd=2, lty=2)
+  }
+}
+```
+
+age vs TenYearCHD
+
+```{r}
+library (ggplot2)
+ggplot(heartDisease, aes(x= as.factor(TenYearCHD), y=age)) + geom_boxplot() + labs (x = "TenYearCHD: yes or no", y = "ages")
+```
+From the graph, we can conclude that older people are more likely to have 10 year risk of coronary heart disease. 
+
+```{r}
+emplogit(x=heartDisease$age, y=heartDisease$TenYearCHD, binsize = 50,xlab = "ages", ylab = "Empirical Logit")
+```
+```{r}
+AgeModel <- glm(TenYearCHD ~ age, data = heartDisease, family = binomial)
+summary (AgeModel)
+```
+
+$$ log\left(\frac{\hat{\pi}}{1-\hat{\pi}}\right) = {-6.24711} {+0.09022}age$$
+For every one unit increase in age, the log odds of this person being identified as having 10 year risk of heartDisease increases by 0.09022. 
+
+
+cigsPerDay vs TenYearCHD 
+```{r}
+ggplot(heartDisease, aes(x= as.factor(TenYearCHD), y=cigsPerDay)) + geom_boxplot() + labs (x = "TenYearCHD: yes or no", y = "cigsPerDay")
+```
+From the graph, we can conclude that people who have ten year risk of coronary disease usually have more cigarettes per day. 
+
+
+```{r}
+emplogit(x = (heartDisease$cigsPerDay), y = heartDisease$TenYearCHD, binsize = 30,xlab = "CigsPerDay", ylab = "Empirical Logit")
+```
+```{r}
+CigsModel <- glm(TenYearCHD ~ cigsPerDay, data = heartDisease, family = binomial)
+summary (CigsModel)
+```
+
+$$ log\left(\frac{\hat{\pi}}{1-\hat{\pi}}\right) = {-1.732840} {+0.016904}cigsPerDay$$
+For every unit increase in cigsPerDay,the odds of person to be identified to have 10 year risk of coronary disease increases by 0.016904. 
+
+totChol vs TenYearCHD
+```{r}
+ggplot(heartDisease, aes(x= as.factor(TenYearCHD), y=totChol)) + geom_boxplot() + labs (x = "TenYearCHD: yes or no", y = "totChol")
+```
+From the graph, we can conclude that people who have higher total cholesterol level are more likely to have 10 year risk of coronary disease. 
+```{r}
+emplogit(x = log(heartDisease$totChol), y = heartDisease$TenYearCHD, binsize = 50,xlab = "log(totChol)", ylab = "Empirical Logit")
+```
+```{r}
+totModel <- glm(TenYearCHD ~ log(totChol), data = heartDisease, family = binomial)
+summary (totModel)
+```
+
+$$ log\left(\frac{\hat{\pi}}{1-\hat{\pi}}\right) = {-11.4985} {+1.8163}log(totChol)$$
+
+For every unit increase in log(totChol), the log odds of person identified to have 10 year risk of coronary disease increases by 1.8163. 
+
+
+sysBP vs TenYearCHD
+```{r}
+ggplot(heartDisease, aes(x= as.factor(TenYearCHD), y=sysBP)) + geom_boxplot() + labs (x = "TenYearCHD: yes or no", y = "sysBP")
+```
+From the graph, we can conclude that people who have higher sysBP are more likely to have the 10 year risk of coronary disease. 
+
+```{r}
+emplogit(x = heartDisease$sysBP, y = heartDisease$TenYearCHD, binsize = 50,xlab = "sysBP", ylab = "Empirical Logit")
+```
+
+```{r}
+sysModel <- glm(TenYearCHD ~ sysBP, data = heartDisease, family = binomial)
+summary (sysModel)
+```
+
+$$ log\left(\frac{\hat{\pi}}{1-\hat{\pi}}\right) = {-4.672911} {+0.022872}sysBP$$
+For every unit increase in the level of sysBP, the log odds of person being identified as having 10 year risk of coronary disease increases by 0.022872. 
+
+
+BMI vs TenYearCHD
+```{r}
+ggplot(heartDisease, aes(x= as.factor(TenYearCHD), y=BMI)) + geom_boxplot() + labs (x = "TenYearCHD: yes or no", y = "BMI")
+```
+
+There is no clear relationship between these two variables. 
+
+```{r}
+emplogit(x = log(heartDisease$BMI), y = heartDisease$TenYearCHD, binsize = 50,xlab = "BMI", ylab = "Empirical Logit")
+```
+
+The relationship between BMI and TenYearCHD is weak, so we will not consider BMI as a  predictor when fitting the nultiple logistic regression line. 
+
+heartRate vs TenYearCHD 
+```{r}
+ggplot(heartDisease, aes(x= as.factor(TenYearCHD), y=heartRate)) + geom_boxplot() + labs (x = "TenYearCHD: yes or no", y = "heartRate")
+```
+```{r}
+emplogit(x = log(heartDisease$BMI), y = heartDisease$TenYearCHD, binsize = 50,xlab = "heartRate", ylab = "Empirical Logit")
+```
+There is no obvious relationship between heartRate and TenYearCHD. So we will not consider heartRate as a predictor when fitting the multiple logistic regression model. 
+
+Glucose vs TenYearCHD 
+```{r}
+emplogit(x = log(heartDisease$glucose), y = heartDisease$TenYearCHD, binsize = 50,xlab = "log(Glucose)", ylab = "Empirical Logit")
+```
+```{r}
+gluModel <- glm(TenYearCHD ~ log(glucose), data = heartDisease, family = binomial)
+summary (gluModel)
+```
+
+$$ log\left(\frac{\hat{\pi}}{1-\hat{\pi}}\right) = {-8.5692} {+1.5835}log(glucose)$$
+For every unit increase in glucose, the log odds of person identifying to have 10 year risk of coronary disease increases by 1.5835. 
+
+To summarize, there are total 7 predictors we consider to fit the multiple logistic regression model: two categorical data: gender and diabetes. Male indicates a higher possibility of having the 10 year risk of coronary disease than female. People who have diabetes also have higher possibility of having the risk. And there are other five numerical predictors. The log odds indicate a positive relation to
+age, cigsPerDay, log(totChol), sysBP, and log(glucose). 
+
+
+## multicollinearity of predictors 
+
+```{r}
+library(Matrix)
+cc<-cor(heartDisease[,c("age", "cigsPerDay","totChol", "sysBP","glucose")])
+tril(round(cc, digits = 2)) ##rounding to 2 decimal places
+```
+The correlation between predictors is weak, therefore, we do not need to add interaction term into the multiple logictic model. 
+
+## Fit a Multiple logistic Regression Model 
+```{r}
+library(bestglm)
+```
+
+```{r}
+X<-model.matrix(glm(TenYearCHD~ gender+diabetes+ age+cigsPerDay+log(totChol)+sysBP+log(glucose),data=heartDisease, family="binomial"))
+```
+
+```{r}
+Xy<-cbind(as.data.frame(X[,-1]),TenYearCHD=heartDisease$TenYearCHD)
+BSS<-bestglm(Xy, IC = "AIC", family = binomial)
+BSS$BestModel
+```
+
+```{r}
+finalModel <- glm(TenYearCHD ~ gender+age+cigsPerDay+sysBP+log(glucose), data = heartDisease, family = binomial)
+summary (finalModel)
+```
+
+compare it with the whole model. 
+```{r}
+wholeModel <- glm(TenYearCHD ~ gender+diabetes+age+cigsPerDay+log(totChol)+sysBP+log(glucose), data = heartDisease, family = binomial)
+summary (wholeModel)
+```
+
+```{r}
+anova(finalModel,wholeModel,test = "Chisq")
+```
+
+whole model fails to reject the final model. 
+
+Compare the final model with the third model which includes predictor log(totChol). 
+```{r}
+thirdModel <- glm(TenYearCHD ~ gender+age+cigsPerDay+log(totChol)+sysBP+log(glucose), data = heartDisease, family = binomial)
+summary (thirdModel)
+```
+
+```{r}
+anova(finalModel,thirdModel,test = "Chisq")
+```
+
+The third model fails to reject the final model. 
+
+
+The final model is 
+$$ log\left(\frac{\hat{\pi}}{1-\hat{\pi}}\right) = {-6.24711} {+0.72}gender{+0.08}age{+0.01}cigsPerDay{+0.02}sysBP{+1.15}log(glucose)$$
