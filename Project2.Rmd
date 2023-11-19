@@ -1,6 +1,6 @@
 ---
-title: "Project2"
-author: "Jessica Chen Cynthia Wang"
+title: "Heat Disease Regression Analysis"
+author: "Jessica Chen"
 date: "4/26/2022"
 output:
   pdf_document: default
